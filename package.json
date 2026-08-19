@@ -2,7 +2,7 @@
   "name": "outbox-auto-mail-sender",
   "version": "1.0.0",
   "scripts": {
-    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma || true",
     "build": "npm run build --prefix frontend"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.14",
+    "prisma": "^5.22.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -25,7 +26,6 @@
     "@types/node": "^20.14.9",
     "@types/nodemailer": "^6.4.15",
     "@vercel/node": "^3.2.0",
-    "prisma": "^5.22.0",
     "typescript": "^5.5.2"
   }
 }
