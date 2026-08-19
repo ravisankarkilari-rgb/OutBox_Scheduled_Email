@@ -1,0 +1,73 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../backend/node_modules/.prisma/client"
+}
+
+model User {
+  id              String          @id @default(uuid())
+  googleId        String          @unique
+  name            String
+  email           String          @unique
+  avatar          String?
+  refreshToken    String?
+  accessToken     String?
+  smtpEmail       String?
+  smtpAppPassword String?
+  smtpConfigured  Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  campaigns       EmailCampaign[]
+}
+
+model EmailCampaign {
+  id                 String     @id @default(uuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject            String
+  body               String
+  senderName         String?
+  attachments        Json?
+  startTime          DateTime
+  delayBetweenEmails Int        // In seconds
+  hourlyLimit        Int        // Maximum emails per hour
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  jobs               EmailJob[]
+
+  @@index([userId])
+}
+
+enum JobStatus {
+  scheduled
+  processing
+  sent
+  failed
+}
+
+model EmailJob {
+  id           String        @id @default(uuid())
+  campaignId   String
+  campaign     EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient    String
+  subject      String
+  body         String
+  scheduledAt  DateTime
+  sentAt       DateTime?
+  status       JobStatus     @default(scheduled)
+  attempts     Int           @default(0)
+  bullJobId    String?       @unique
+  errorMessage String?
+  previewUrl   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([recipient])
+}

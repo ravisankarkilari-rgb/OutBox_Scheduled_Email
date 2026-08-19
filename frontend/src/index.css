@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --paper-bg: #FBFBF9;
+    --paper-card: #FFFFFF;
+    --paper-border: #E8E8E2;
+    --paper-border-hover: #D5D5CC;
+    --charcoal-900: #141413;
+    --charcoal-700: #3D3D3A;
+    --charcoal-500: #6B6B66;
+    --charcoal-400: #94948C;
+    --terracotta: #C84B26;
+    --terracotta-hover: #B23E1B;
+    --terracotta-light: #FDF2EE;
+    --cobalt: #2563EB;
+    --cobalt-light: #EFF6FF;
+    --forest: #15803D;
+    --forest-light: #F0FDF4;
+    --amber: #B45309;
+    --amber-light: #FFFBEB;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--paper-bg);
+    color: var(--charcoal-900);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-editorial {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Luxury hairline subtle shadows */
+.shadow-paper-sm {
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.03), 0 1px 3px rgba(20, 20, 19, 0.02);
+}
+
+.shadow-paper {
+  box-shadow: 0 4px 16px -2px rgba(20, 20, 19, 0.04), 0 2px 6px -1px rgba(20, 20, 19, 0.02);
+}
+
+.shadow-paper-lg {
+  box-shadow: 0 12px 36px -4px rgba(20, 20, 19, 0.08), 0 4px 12px -2px rgba(20, 20, 19, 0.03);
+}
+
+.shadow-paper-xl {
+  box-shadow: 0 20px 50px -8px rgba(20, 20, 19, 0.12), 0 8px 20px -4px rgba(20, 20, 19, 0.04);
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E2E2DC;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C8C8BE;
+}
