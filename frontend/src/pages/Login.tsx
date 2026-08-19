@@ -11,8 +11,19 @@ export const Login: React.FC = () => {
   const error = searchParams.get('error');
   const [loading, setLoading] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://out-box-scheduled-email-c47jvzj2i.vercel.app';
-  const googleLoginUrl = `${BACKEND_URL}/api/auth/google`;
+  const GOOGLE_CLIENT_ID = '896070974157-1vc2536s88fpsvrtbmp5sngksjagf3je.apps.googleusercontent.com';
+  const REDIRECT_URI = 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
+
+  const googleAuthParams = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+
+  const googleLoginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${googleAuthParams.toString()}`;
 
   const handleInstantLogin = async () => {
     try {
