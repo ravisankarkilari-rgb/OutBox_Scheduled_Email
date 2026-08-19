@@ -16,16 +16,13 @@ export const AuthCallback: React.FC = () => {
     const token = searchParams.get('token');
 
     if (token) {
+      localStorage.setItem('reachinbox_token', token);
       login(token)
-        .then(() => {
+        .finally(() => {
           navigate('/dashboard', { replace: true });
-        })
-        .catch((error) => {
-          console.error('[AuthCallback] Failed login via query token:', error);
-          navigate('/login?error=token_exchange_failed', { replace: true });
         });
     } else {
-      navigate('/login?error=missing_code', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [searchParams, login, navigate]);
 
