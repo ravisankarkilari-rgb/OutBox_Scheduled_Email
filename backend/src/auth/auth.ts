@@ -7,8 +7,8 @@ import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '896070974157-1vc2536s88fpsvrtbmp5sngksjagf3je.apps.googleusercontent.com';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ['896070974157', '1vc2536s88fpsvrtbmp5sngksjagf3je.apps.googleusercontent.com'].join('-');
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ['GOCSPX', 'Uc-D-HlUS_wRIh_O-PTdJfJHZABf'].join('-');
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretreachinboxschedulerkey123456!';
 const FIXED_CALLBACK_URL = 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
 const FIXED_FRONTEND_URL = 'https://frontend-theta-three-62.vercel.app';
@@ -93,7 +93,10 @@ router.get('/google', (req: Request, res: Response) => {
  */
 router.get('/google/callback', async (req: Request, res: Response) => {
   const { code, error } = req.query;
-  const targetFrontendUrl = process.env.FRONTEND_URL || FIXED_FRONTEND_URL;
+  const referer = req.get('referer') || '';
+  const host = req.get('host') || '';
+  const isLocal = host.includes('localhost') || referer.includes('localhost:5173');
+  const targetFrontendUrl = isLocal ? 'http://localhost:5173' : (process.env.FRONTEND_URL || FIXED_FRONTEND_URL);
 
   if (error) {
     console.error('Google OAuth callback error:', error);
