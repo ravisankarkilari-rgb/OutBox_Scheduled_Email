@@ -10,78 +10,76 @@ const router = Router();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretreachinboxschedulerkey123456!';
-const DEFAULT_CALLBACK_URL = 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
-const DEFAULT_FRONTEND_URL = 'https://frontend-theta-three-62.vercel.app';
-
-function getCallbackUrl(req: Request): string {
-  if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim()) {
-    return process.env.GOOGLE_CALLBACK_URL.trim();
-  }
-  const host = req.get('host');
-  if (host && !host.includes('localhost')) {
-    return `https://${host}/api/auth/google/callback`;
-  }
-  return DEFAULT_CALLBACK_URL;
-}
+const CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
 
 /**
  * GET /api/auth/google
- * Redirects the user to Google's OAuth consent screen.
+ * Explicitly builds Google OAuth URL with guaranteed redirect_uri
  */
 router.get('/google', (req: Request, res: Response) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return res.status(500).json({
-      error: 'Google OAuth credentials missing on backend. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+      error: 'Google OAuth configuration missing. Please ensure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set.',
     });
   }
 
-  const callbackUrl = getCallbackUrl(req);
-  const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, callbackUrl);
+  const host = req.get('host');
+  const redirectUri = (host && !host.includes('localhost'))
+    ? `https://${host}/api/auth/google/callback`
+    : CALLBACK_URL;
 
-  const authorizeUrl = client.generateAuthUrl({
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
     access_type: 'offline',
-    scope: [
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/userinfo.email',
-    ],
     prompt: 'consent',
-    redirect_uri: callbackUrl,
   });
 
+  const authorizeUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   return res.redirect(authorizeUrl);
 });
 
 /**
  * GET /api/auth/google/callback
- * Handles the Google OAuth callback, exchanges code for user profile,
- * creates/updates user in PostgreSQL, signs a JWT, and redirects to frontend.
+ * Handles the Google OAuth callback, exchanges code for user profile
  */
 router.get('/google/callback', async (req: Request, res: Response) => {
   const { code, error } = req.query;
-  const targetFrontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
+  const targetFrontendUrl = FRONTEND_URL;
 
   if (error) {
     console.error('Google OAuth callback error:', error);
-    return res.redirect(`${targetFrontendUrl}/auth-error?error=${encodeURIComponent(String(error))}`);
+    return res.redirect(`${targetFrontendUrl}/login?error=${encodeURIComponent(String(error))}`);
   }
 
   if (!code) {
-    return res.redirect(`${targetFrontendUrl}/auth-error?error=missing_code`);
+    return res.redirect(`${targetFrontendUrl}/login?error=missing_code`);
   }
 
   try {
-    const callbackUrl = getCallbackUrl(req);
-    const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, callbackUrl);
+    const host = req.get('host');
+    const redirectUri = (host && !host.includes('localhost'))
+      ? `https://${host}/api/auth/google/callback`
+      : CALLBACK_URL;
+
+    const oauth2Client = new OAuth2Client(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+      redirectUri
+    );
 
     // Exchange auth code for tokens
-    const { tokens } = await client.getToken({
+    const { tokens } = await oauth2Client.getToken({
       code: String(code),
-      redirect_uri: callbackUrl,
+      redirect_uri: redirectUri,
     });
-    client.setCredentials(tokens);
+    oauth2Client.setCredentials(tokens);
 
     // Fetch user details from Google userinfo API
-    const ticket = await client.request<{
+    const ticket = await oauth2Client.request<{
       id: string;
       email: string;
       name: string;
@@ -93,7 +91,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     const profile = ticket.data;
 
     if (!profile.email) {
-      return res.redirect(`${targetFrontendUrl}/auth-error?error=email_not_provided`);
+      return res.redirect(`${targetFrontendUrl}/login?error=email_not_provided`);
     }
 
     const updateData: any = {
@@ -137,7 +135,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     return res.redirect(`${targetFrontendUrl}/auth/callback?token=${token}`);
   } catch (err: any) {
     console.error('Failed to exchange code and log in user:', err);
-    return res.redirect(`${targetFrontendUrl}/auth-error?error=token_exchange_failed`);
+    return res.redirect(`${targetFrontendUrl}/login?error=token_exchange_failed`);
   }
 });
 
@@ -151,7 +149,7 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response) => {
 
 /**
  * POST /api/auth/logout
- * Acknowledges user logout. Client deletes token from storage.
+ * Acknowledges user logout.
  */
 router.post('/logout', (req: Request, res: Response) => {
   return res.json({ message: 'Logout successful' });
