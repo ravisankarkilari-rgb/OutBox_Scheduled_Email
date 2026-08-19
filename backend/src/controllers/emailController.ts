@@ -78,6 +78,18 @@ export async function scheduleCampaign(req: AuthenticatedRequest, res: Response)
       };
     });
 
+    // Ensure User record exists in DB to satisfy foreign key constraint
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: {
+        id: userId,
+        email: req.user?.email || 'ravisankarkilari@gmail.com',
+        name: req.user?.name || 'Ravi Sankar Kilari',
+        googleId: 'usr_' + userId,
+      },
+    });
+
     // Write database records atomically in a transaction
     const campaign = await prisma.$transaction(async (tx: any) => {
       // 1. Create the campaign
