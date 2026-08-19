@@ -32,7 +32,24 @@ app.use(express.urlencoded({ extended: true, limit: '35mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/emails', emailRoutes);
 
-// Health check endpoint
+// Root & Health check endpoints
+app.get('/', (req: Request, res: Response) => {
+  return res.json({
+    status: 'online',
+    service: 'Outbox Auto Mail Sender API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api', (req: Request, res: Response) => {
+  return res.json({
+    status: 'online',
+    service: 'Outbox Auto Mail Sender API',
+    endpoints: ['/api/auth', '/api/emails', '/api/health'],
+  });
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
   return res.json({
     status: 'healthy',
