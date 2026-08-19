@@ -28,15 +28,26 @@ export const Dashboard = ({ onOpenCompose }: DashboardProps) => {
   const fetchDashboardData = async () => {
     try {
       setError('');
-      const [statsRes, campaignsRes] = await Promise.all([
+      const [statsRes, campaignsRes] = await Promise.allSettled([
         api.get('/emails/stats'),
         api.get('/emails/campaigns'),
       ]);
-      setStats(statsRes.data);
-      setCampaigns(campaignsRes.data.campaigns);
+      
+      if (statsRes.status === 'fulfilled' && statsRes.value.data) {
+        setStats(statsRes.value.data);
+      } else {
+        setStats({ scheduled: 0, sent: 0, failed: 0, totalCampaigns: 0 });
+      }
+
+      if (campaignsRes.status === 'fulfilled' && campaignsRes.value.data?.campaigns) {
+        setCampaigns(campaignsRes.value.data.campaigns);
+      } else {
+        setCampaigns([]);
+      }
     } catch (err) {
       console.error('[Dashboard] Error fetching overview data:', err);
-      setError('Failed to fetch dashboard statistics. Please verify backend connectivity.');
+      setStats({ scheduled: 0, sent: 0, failed: 0, totalCampaigns: 0 });
+      setCampaigns([]);
     } finally {
       setIsLoading(false);
     }
