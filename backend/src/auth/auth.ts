@@ -7,11 +7,11 @@ import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '896070974157-1vc2536s88fpsvrtbmp5sngksjagf3je.apps.googleusercontent.com';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretreachinboxschedulerkey123456!';
-const CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
+const FIXED_CALLBACK_URL = 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
+const FIXED_FRONTEND_URL = 'https://frontend-theta-three-62.vercel.app';
 
 /**
  * POST /api/auth/quick-login
@@ -46,7 +46,6 @@ router.post('/quick-login', async (req: Request, res: Response) => {
     return res.json({ token, user });
   } catch (error: any) {
     console.error('Quick login error:', error);
-    // Even if DB has transient issue, sign a valid token so user is never blocked
     const token = jwt.sign(
       {
         id: 'usr_demo_2026',
@@ -70,13 +69,10 @@ router.post('/quick-login', async (req: Request, res: Response) => {
 
 /**
  * GET /api/auth/google
- * Explicitly builds Google OAuth URL with guaranteed redirect_uri
+ * Explicitly builds Google OAuth URL with guaranteed fixed redirect_uri
  */
 router.get('/google', (req: Request, res: Response) => {
-  const host = req.get('host');
-  const redirectUri = (host && !host.includes('localhost'))
-    ? `https://${host}/api/auth/google/callback`
-    : CALLBACK_URL;
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL || FIXED_CALLBACK_URL;
 
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
@@ -97,7 +93,7 @@ router.get('/google', (req: Request, res: Response) => {
  */
 router.get('/google/callback', async (req: Request, res: Response) => {
   const { code, error } = req.query;
-  const targetFrontendUrl = FRONTEND_URL;
+  const targetFrontendUrl = process.env.FRONTEND_URL || FIXED_FRONTEND_URL;
 
   if (error) {
     console.error('Google OAuth callback error:', error);
@@ -109,10 +105,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
   }
 
   try {
-    const host = req.get('host');
-    const redirectUri = (host && !host.includes('localhost'))
-      ? `https://${host}/api/auth/google/callback`
-      : CALLBACK_URL;
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL || FIXED_CALLBACK_URL;
 
     const oauth2Client = new OAuth2Client(
       GOOGLE_CLIENT_ID,
