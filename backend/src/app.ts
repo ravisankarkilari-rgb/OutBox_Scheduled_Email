@@ -10,10 +10,16 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // Security Headers
 app.use(helmet());
 
-// CORS config
+// CORS config (supports localhost, custom FRONTEND_URL, and Vercel domains)
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || origin === FRONTEND_URL || origin.includes('localhost') || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );
