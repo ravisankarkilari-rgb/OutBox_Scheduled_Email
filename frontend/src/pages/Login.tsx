@@ -6,7 +6,7 @@ export const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const error = searchParams.get('error');
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://out-box-scheduled-email-c47jvzj2i.vercel.app' : 'http://localhost:5000');
   const googleLoginUrl = `${BACKEND_URL}/api/auth/google`;
 
   const getErrorDescription = () => {

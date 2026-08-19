@@ -10,18 +10,18 @@ const router = Router();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretreachinboxschedulerkey123456!';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
+const DEFAULT_CALLBACK_URL = 'https://out-box-scheduled-email-c47jvzj2i.vercel.app/api/auth/google/callback';
+const DEFAULT_FRONTEND_URL = 'https://frontend-theta-three-62.vercel.app';
 
-/**
- * Dynamically resolves the OAuth callback URL based on request headers or env
- */
 function getCallbackUrl(req: Request): string {
   if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim()) {
     return process.env.GOOGLE_CALLBACK_URL.trim();
   }
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  const host = req.get('host') || 'out-box-scheduled-email-c47jvzj2i.vercel.app';
-  return `${protocol}://${host}/api/auth/google/callback`;
+  const host = req.get('host');
+  if (host && !host.includes('localhost')) {
+    return `https://${host}/api/auth/google/callback`;
+  }
+  return DEFAULT_CALLBACK_URL;
 }
 
 /**
@@ -31,7 +31,7 @@ function getCallbackUrl(req: Request): string {
 router.get('/google', (req: Request, res: Response) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return res.status(500).json({
-      error: 'Google OAuth configuration missing. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+      error: 'Google OAuth credentials missing on backend. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
     });
   }
 
@@ -58,8 +58,7 @@ router.get('/google', (req: Request, res: Response) => {
  */
 router.get('/google/callback', async (req: Request, res: Response) => {
   const { code, error } = req.query;
-
-  const targetFrontendUrl = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
+  const targetFrontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
 
   if (error) {
     console.error('Google OAuth callback error:', error);
