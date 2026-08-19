@@ -20,7 +20,7 @@ export const Login: React.FC = () => {
     response_type: 'code',
     scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
     access_type: 'offline',
-    prompt: 'consent',
+    prompt: 'select_account consent',
   });
 
   const googleLoginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${googleAuthParams.toString()}`;
