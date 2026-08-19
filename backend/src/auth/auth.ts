@@ -2,21 +2,27 @@ import { Router, Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/db';
+import { authenticate } from '../middleware/authMiddleware';
+import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretreachinboxschedulerkey123456!';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
 
-// Initialize OAuth2 client
-const oauth2Client = new OAuth2Client(
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  GOOGLE_CALLBACK_URL
-);
+/**
+ * Dynamically resolves the OAuth callback URL based on request headers or env
+ */
+function getCallbackUrl(req: Request): string {
+  if (process.env.GOOGLE_CALLBACK_URL && process.env.GOOGLE_CALLBACK_URL.trim()) {
+    return process.env.GOOGLE_CALLBACK_URL.trim();
+  }
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.get('host') || 'out-box-scheduled-email-c47jvzj2i.vercel.app';
+  return `${protocol}://${host}/api/auth/google/callback`;
+}
 
 /**
  * GET /api/auth/google
@@ -25,17 +31,21 @@ const oauth2Client = new OAuth2Client(
 router.get('/google', (req: Request, res: Response) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return res.status(500).json({
-      error: 'Google OAuth configuration missing. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file.',
+      error: 'Google OAuth configuration missing. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
     });
   }
 
-  const authorizeUrl = oauth2Client.generateAuthUrl({
+  const callbackUrl = getCallbackUrl(req);
+  const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, callbackUrl);
+
+  const authorizeUrl = client.generateAuthUrl({
     access_type: 'offline',
     scope: [
       'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/userinfo.email',
     ],
     prompt: 'consent',
+    redirect_uri: callbackUrl,
   });
 
   return res.redirect(authorizeUrl);
@@ -49,22 +59,30 @@ router.get('/google', (req: Request, res: Response) => {
 router.get('/google/callback', async (req: Request, res: Response) => {
   const { code, error } = req.query;
 
+  const targetFrontendUrl = process.env.FRONTEND_URL || 'https://frontend-theta-three-62.vercel.app';
+
   if (error) {
     console.error('Google OAuth callback error:', error);
-    return res.redirect(`${FRONTEND_URL}/auth-error?error=${encodeURIComponent(String(error))}`);
+    return res.redirect(`${targetFrontendUrl}/auth-error?error=${encodeURIComponent(String(error))}`);
   }
 
   if (!code) {
-    return res.redirect(`${FRONTEND_URL}/auth-error?error=missing_code`);
+    return res.redirect(`${targetFrontendUrl}/auth-error?error=missing_code`);
   }
 
   try {
+    const callbackUrl = getCallbackUrl(req);
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, callbackUrl);
+
     // Exchange auth code for tokens
-    const { tokens } = await oauth2Client.getToken(String(code));
-    oauth2Client.setCredentials(tokens);
+    const { tokens } = await client.getToken({
+      code: String(code),
+      redirect_uri: callbackUrl,
+    });
+    client.setCredentials(tokens);
 
     // Fetch user details from Google userinfo API
-    const ticket = await oauth2Client.request<{
+    const ticket = await client.request<{
       id: string;
       email: string;
       name: string;
@@ -76,7 +94,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     const profile = ticket.data;
 
     if (!profile.email) {
-      return res.redirect(`${FRONTEND_URL}/auth-error?error=email_not_provided`);
+      return res.redirect(`${targetFrontendUrl}/auth-error?error=email_not_provided`);
     }
 
     const updateData: any = {
@@ -117,15 +135,12 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     );
 
     // Redirect to frontend auth handler page
-    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+    return res.redirect(`${targetFrontendUrl}/auth/callback?token=${token}`);
   } catch (err: any) {
     console.error('Failed to exchange code and log in user:', err);
-    return res.redirect(`${FRONTEND_URL}/auth-error?error=token_exchange_failed`);
+    return res.redirect(`${targetFrontendUrl}/auth-error?error=token_exchange_failed`);
   }
 });
-
-import { authenticate } from '../middleware/authMiddleware';
-import { AuthenticatedRequest } from '../types';
 
 /**
  * GET /api/auth/me
